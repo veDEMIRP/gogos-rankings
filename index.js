@@ -12,8 +12,11 @@ import fs from 'fs';
 
 // SETTINGS
 
+const IPFS_BASE_URL = 'https://cloudflare-ipfs.com/ipfs';
+const TZKT_BASE_URL = 'https://api.tzkt.io/v1';
+const GOGOS_TOKEN_CONTRACT = 'KT1SyPgtiXTaEfBuMZKviWGNHqVrBBEjvtfQ';
+const GOGOS_TZKT_URL = `${TZKT_BASE_URL}/contracts/${GOGOS_TOKEN_CONTRACT}/bigmaps/token_metadata/keys?active=true&select=value&limit=10000`;
 const COLLECTION_TOTAL = 5555;
-const IPFS_BASE_URL = 'https://cloudflare-ipfs.com/ipfs/';
 const DEBUG = false;
 
 // INITIALIZATIONS
@@ -24,14 +27,14 @@ let attributeValues = {};
 let attributeCounts = {};
 let attributeRarityScores = {};
 let attributeRarityPercentages = {};
-let tokenRanks = [];
+let tokensSortedById = [];
+let tokensSortedByRank = [];
 
 // FUNCTIONS
 
 async function getGogosIPFSList() {
   console.log('Getting token info for all GOGOs from TZKT');
-  const tzktUrl = 'https://api.tzkt.io/v1/contracts/KT1SyPgtiXTaEfBuMZKviWGNHqVrBBEjvtfQ/bigmaps/token_metadata/keys?active=true&select=value&limit=10000';
-  const response = await axios.get(tzktUrl);
+  const response = await axios.get(GOGOS_TZKT_URL);
   const tokens = response.data;
   console.log(`Discovered ${tokens.length} GOGOs`);
 
@@ -46,7 +49,7 @@ async function getGogosIPFSList() {
 }
 
 async function getTokenMetadataFromIPFS(ipfsUri) {
-  const ipfsUrl = ipfsUri.replace('ipfs://', IPFS_BASE_URL);
+  const ipfsUrl = ipfsUri.replace('ipfs://', IPFS_BASE_URL + '/');
   const response = await axios.get(ipfsUrl);
   return response.data;
 }
@@ -141,23 +144,42 @@ function calculateTokenRarityScores() {
   });
 }
 
-function calculateTokenRanks() {
-  tokenRanks = Object.keys(tokens).map((key) => {
+function sortTokensById() {
+  tokensSortedById = Object.keys(tokens).map((key) => {
     const token = tokens[key];
     return token;
   });
-  tokenRanks = tokenRanks.sort((a, b) => b.rarityScore - a.rarityScore);
+  tokensSortedById = tokensSortedById.sort((a, b) => a.id - b.id);
 }
 
-function exportTokenRanks() {
-  const filename = 'gogos-rarity-scores.csv';
+function sortTokensByRank() {
+  tokensSortedByRank = Object.keys(tokens).map((key) => {
+    const token = tokens[key];
+    return token;
+  });
+  tokensSortedByRank = tokensSortedByRank.sort((a, b) => b.rarityScore - a.rarityScore);
+}
+
+function exportTokenRanksToCsv() {
+  const filename = 'gogos-by-rank.csv';
   const csvLines = ['rank,id,score'];
-  for (const [i, token] of tokenRanks.entries()) {
-    csvLines.push(`${i+1},${token.id},${token.rarityScore}`);
+  for (const [i, token] of tokensSortedByRank.entries()) {
+    csvLines.push(`${i+1},${String(token.id).padStart(4, '0')},${token.rarityScore}`);
   }
   fs.writeFileSync(filename, csvLines.join('\n'));
 }
 
+function exportTokensToCsv() {
+  const filename = 'gogos-by-id.csv';
+  const csvLines = ['id,rank,score'];
+  for (const [i, token] of tokensSortedByRank.entries()) {
+    csvLines.push(`${String(token.id).padStart(4, '0')},${i+1},${token.rarityScore}`);
+  }
+  fs.writeFileSync(filename, csvLines.join('\n'));
+}
+
+
+// MAIN
 
 const ipfsList = await getGogosIPFSList();
 const items = [];
@@ -192,7 +214,8 @@ for (const id of ids) {
 calculateAttributeRarityScores();
 calculateAttributeRarityPercentages();
 calculateTokenRarityScores();
-calculateTokenRanks();
+sortTokensById();
+sortTokensByRank();
 
 // SUMMARY DEBUG OUTPUT
 
@@ -209,7 +232,8 @@ if (DEBUG) {
   console.log('Tokens (By rarity scores)');
   console.log(JSON.stringify(tokens));
   console.log('Token (By rank)');
-  console.log(JSON.stringify(tokenRanks));
+  console.log(JSON.stringify(tokensSortedByRank));
 }
 
-exportTokenRanks();
+exportTokensToCsv();
+exportTokenRanksToCsv();

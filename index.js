@@ -1,6 +1,10 @@
 // Calculate rarity scores and ranks for GOGOs using TZKT on Tezos Blockchain
 //
-// Twitter: kevinelliott
+// Created by PRIME Dev & Kevin Elliott
+//
+// Github: https://github.com/veDEMIRP/gogos-rankings
+// Twitter: https://twitter.com/DosEsposas
+// Twitter: https://twitter.com/kevinelliott
 
 import { bytes2Char } from '@taquito/utils';
 import axios from 'axios';
@@ -43,7 +47,6 @@ async function getGogosIPFSList() {
 
 async function getTokenMetadataFromIPFS(ipfsUri) {
   const ipfsUrl = ipfsUri.replace('ipfs://', IPFS_BASE_URL);
-  // const ipfsUrl = ipfsUri.replace('ipfs://', 'https://ipfs.fleek.co/ipfs/');
   const response = await axios.get(ipfsUrl);
   return response.data;
 }
@@ -139,7 +142,6 @@ function calculateTokenRarityScores() {
 }
 
 function calculateTokenRanks() {
-  // TODO: Implement!
   tokenRanks = Object.keys(tokens).map((key) => {
     const token = tokens[key];
     return token;
@@ -192,10 +194,7 @@ calculateAttributeRarityPercentages();
 calculateTokenRarityScores();
 calculateTokenRanks();
 
-// SUMMARY OUTPUT
-// const json = JSON.stringify(items);
-// console.log('Everything');
-// console.log(json);
+// SUMMARY DEBUG OUTPUT
 
 if (DEBUG) {
   console.log('');
